@@ -32,7 +32,8 @@ logger = get_logger(__name__)
 
 class RecordingView(Container):
     """Full-screen view shown during active recording."""
-    
+
+    can_focus = True  # Allow the container itself to hold focus so s/x work without being inside an input
     elapsed_time = reactive(0)  # seconds
     
     def compose(self) -> ComposeResult:
@@ -76,11 +77,11 @@ class RecordingView(Container):
     def on_key(self, event) -> None:
         """Handle key events for the recording view."""
         if event.key == "escape":
-            # Unfocus the title input or notes textarea so global key
-            # bindings (like 's' to stop) work again without tabbing away.
+            # Blur any focused input and return focus to this container,
+            # so 's' / 'x' bindings work immediately afterwards.
             try:
                 if self._has_focused_input():
-                    self.screen.set_focus(None)
+                    self.focus()
                     event.prevent_default()
             except Exception:
                 pass  # Inputs not found or not mounted
@@ -1044,7 +1045,12 @@ class MeetingNotesApp(App):
                 
                 # Start timer updates (every 1 second)
                 self.timer_interval = self.set_interval(1.0, self.update_recording_timer)
-                
+
+                # Focus the recording view container itself (not any input inside it)
+                # so that 's' and 'x' bindings work immediately without the user
+                # having to click or press Esc first.
+                recording_view.focus()
+
                 # Update footer bindings
                 self.refresh_bindings()
                 
